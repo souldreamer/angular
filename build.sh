@@ -41,6 +41,7 @@ for PACKAGE in \
   platform-server \
   http \
   router \
+  router-deprecated \
   upgrade
 do
   SRCDIR=./modules/@angular/${PACKAGE}
@@ -49,8 +50,8 @@ do
   UMDES5PATH=${DESTDIR}/${PACKAGE}.umd.js
 
 
-  echo "======      COMPILING: \$(npm bin)/ng2tc -p ${SRCDIR}/tsconfig.json        ====="
-  $(npm bin)/ng2tc -p ${SRCDIR}/tsconfig.json
+  echo "======      COMPILING: \$(npm bin)/ng2tc -p ${SRCDIR}/tsconfig-es5.json        ====="
+  $(npm bin)/ng2tc -p ${SRCDIR}/tsconfig-es5.json
   cp ${SRCDIR}/package.json ${DESTDIR}/
 
 
@@ -58,8 +59,10 @@ do
   # safely strips 'readonly' specifier from d.ts files to make them compatible with tsc 1.8
   if [[ ${TRAVIS} ]]; then
     find ${DESTDIR} -type f -name '*.d.ts' -print0 | xargs -0 sed -i    -e 's/\(^ *(static |private )*\)*readonly  */\1/g'
+    find ${DESTDIR} -type f -name '*.d.ts' -print0 | xargs -0 sed -i    -E 's/^( +)abstract ([[:alnum:]]+\:)/\1\2/g'
   else
     find ${DESTDIR} -type f -name '*.d.ts' -print0 | xargs -0 sed -i '' -e 's/\(^ *(static |private )*\)*readonly  */\1/g'
+    find ${DESTDIR} -type f -name '*.d.ts' -print0 | xargs -0 sed -i '' -E 's/^( +)abstract ([[:alnum:]]+\:)/\1\2/g'
   fi
 
 

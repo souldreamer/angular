@@ -13,7 +13,7 @@ and then downloading only the executable JS to the client.
 ## Install and use
 
 ```
-$ npm install angular2-template-compiler typescript rxjs
+$ npm install angular2-template-compiler typescript@next rxjs @angular/compiler
 # Optional sanity check, make sure TypeScript can compile
 $ ./node_modules/.bin/tsc -p path/to/project
 $ ./node_modules/.bin/ng2tc -p path/to/project
@@ -89,7 +89,7 @@ node ./dist/js/cjs/compiler_cli -p tools/compiler_cli/test
 Release:
 ```
 $ gulp test.compiler_cli
-$ cp tools/compiler_cli/README.md tools/compiler_cli/package.json dist/js/cjs/compiler_cli
+$ cp tools/compiler_cli/README.md tools/compiler_cli/package.json dist/tools/compiler_cli
 # npm login as angularcore
-$ npm publish dist/js/cjs/compiler_cli
+$ npm publish dist/tools/compiler_cli
 ```

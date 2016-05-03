@@ -1,2 +1,1 @@
-// future location of testing for router.
-export var __nothing__;
+export * from './testing/router_testing_providers';

@@ -1,4 +1,4 @@
-import {StringMapWrapper, ListWrapper} from '@angular/facade/src/collection';
+import {StringMapWrapper, ListWrapper} from '@angular/core/src/facade/collection';
 import {
   isArray,
   isPresent,
@@ -6,7 +6,7 @@ import {
   isPrimitive,
   isStringMap,
   FunctionWrapper
-} from '@angular/facade/src/lang';
+} from '@angular/core/src/facade/lang';
 import {
   AttributeMetadata,
   DirectiveMetadata,
@@ -43,9 +43,9 @@ import {
  */
 export interface StaticReflectorHost {
   /**
-   *  Return a ModuleMetadata for the given module.
+   * Return a ModuleMetadata for the given module.
    *
-   * @param moduleId is a string identifier for a module as an absolute path.
+   * @param modulePath is a string identifier for a module as an absolute path.
    * @returns the metadata for the given module.
    */
   getMetadataFor(modulePath: string): {[key: string]: any};
@@ -57,16 +57,19 @@ export interface StaticReflectorHost {
    */
   findDeclaration(modulePath: string, symbolName: string, containingFile?: string): StaticSymbol;
 
-  getStaticSymbol(moduleId: string, declarationFile: string, name: string): StaticSymbol;
+  getStaticSymbol(declarationFile: string, name: string): StaticSymbol;
+
+  angularImportLocations():
+      {coreDecorators: string, diDecorators: string, diMetadata: string, provider: string};
 }
 
 /**
  * A token representing the a reference to a static type.
  *
- * This token is unique for a moduleId and name and can be used as a hash table key.
+ * This token is unique for a filePath and name and can be used as a hash table key.
  */
 export class StaticSymbol {
-  constructor(public moduleId: string, public filePath: string, public name: string) {}
+  constructor(public filePath: string, public name: string) {}
 }
 
 /**
@@ -117,6 +120,9 @@ export class StaticReflector implements ReflectorReader {
   }
 
   public parameters(type: StaticSymbol): any[] {
+    if (!(type instanceof StaticSymbol)) {
+      throw new Error(`parameters recieved ${JSON.stringify(type)} which is not a StaticSymbol`);
+    }
     try {
       let parameters = this.parameterCache.get(type);
       if (!isPresent(parameters)) {
@@ -148,7 +154,7 @@ export class StaticReflector implements ReflectorReader {
       }
       return parameters;
     } catch (e) {
-      console.log(`Failed on type ${type} with error ${e}`);
+      console.log(`Failed on type ${JSON.stringify(type)} with error ${e}`);
       throw e;
     }
   }
@@ -170,10 +176,7 @@ export class StaticReflector implements ReflectorReader {
   }
 
   private initializeConversionMap(): void {
-    let coreDecorators = 'angular2/src/core/metadata';
-    let diDecorators = 'angular2/src/core/di/decorators';
-    let diMetadata = 'angular2/src/core/di/metadata';
-    let provider = 'angular2/src/core/di/provider';
+    const {coreDecorators, diDecorators, diMetadata, provider} = this.host.angularImportLocations();
     this.registerDecoratorOrConstructor(this.host.findDeclaration(provider, 'Provider'), Provider);
 
     this.registerDecoratorOrConstructor(this.host.findDeclaration(diDecorators, 'Host'),
@@ -321,19 +324,14 @@ export class StaticReflector implements ReflectorReader {
                 staticSymbol = _this.host.findDeclaration(expression['module'], expression['name'],
                                                           context.filePath);
               } else {
-                staticSymbol = _this.host.getStaticSymbol(context.moduleId, context.filePath,
-                                                          expression['name']);
+                staticSymbol = _this.host.getStaticSymbol(context.filePath, expression['name']);
               }
               let result = staticSymbol;
               let moduleMetadata = _this.getModuleMetadata(staticSymbol.filePath);
               let declarationValue =
                   isPresent(moduleMetadata) ? moduleMetadata['metadata'][staticSymbol.name] : null;
               if (isPresent(declarationValue)) {
-                if (isClassMetadata(declarationValue)) {
-                  result = staticSymbol;
-                } else {
-                  result = _this.simplify(staticSymbol, declarationValue);
-                }
+                result = _this.simplify(staticSymbol, declarationValue);
               }
               return result;
             case "class":
@@ -387,10 +385,6 @@ export class StaticReflector implements ReflectorReader {
     }
     return result;
   }
-}
-
-function isClassMetadata(expression: any): boolean {
-  return !isPrimitive(expression) && !isArray(expression) && expression['__symbolic'] == 'class';
 }
 
 function mapStringMap(input: {[key: string]: any},
