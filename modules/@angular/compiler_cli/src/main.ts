@@ -1,7 +1,4 @@
 #!/usr/bin/env node
-// TODO(alexeagle): use --lib=node when available; remove this reference
-// https://github.com/Microsoft/TypeScript/pull/7757#issuecomment-205644657
-/// <reference path="../../typings/node/node.d.ts"/>
 
 // Must be imported first, because angular2 decorators throws on load.
 import 'reflect-metadata';
@@ -42,10 +39,9 @@ export function main(project: string, basePath?: string): Promise<any> {
     const errors = program.getOptionsDiagnostics();
     check(errors);
 
-    const doCodegen =
-        ngOptions.skipTemplateCodegen ?
-            Promise.resolve(null) :
-            CodeGenerator.create(ngOptions, program, parsed.options, host).codegen();
+    const doCodegen = ngOptions.skipTemplateCodegen ?
+                          Promise.resolve(null) :
+                          CodeGenerator.create(ngOptions, program, parsed.options, host).codegen();
 
     return doCodegen.then(() => {
       tsc.typeCheck(host, program);

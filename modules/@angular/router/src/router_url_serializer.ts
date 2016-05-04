@@ -2,11 +2,24 @@ import {UrlSegment, Tree, TreeNode, rootNode, UrlTree} from './segments';
 import {BaseException} from '@angular/core';
 import {isBlank, isPresent, RegExpWrapper} from './facade/lang';
 
+/**
+ * Defines a way to serialize/deserialize a url tree.
+ */
 export abstract class RouterUrlSerializer {
+  /**
+   * Parse a url into a {@Link UrlTree}
+   */
   abstract parse(url: string): UrlTree;
+
+  /**
+   * Converts a {@Link UrlTree} into a url
+   */
   abstract serialize(tree: UrlTree): string;
 }
 
+/**
+ * A default implementation of the serialization.
+ */
 export class DefaultRouterUrlSerializer extends RouterUrlSerializer {
   parse(url: string): UrlTree {
     let root = new _UrlParser().parse(url);
@@ -30,8 +43,7 @@ function _serializeUrlTreeNodes(nodes: TreeNode<UrlSegment>[]): string {
 
 function _serializeChildren(node: TreeNode<UrlSegment>): string {
   if (node.children.length > 0) {
-    let slash = isBlank(node.children[0].value.segment) ? "" : "/";
-    return `${slash}${_serializeUrlTreeNodes(node.children)}`;
+    return `/${_serializeUrlTreeNodes(node.children)}`;
   } else {
     return "";
   }
@@ -63,7 +75,7 @@ class _UrlParser {
   parse(url: string): TreeNode<UrlSegment> {
     this._remaining = url;
     if (url == '' || url == '/') {
-      return new TreeNode<UrlSegment>(new UrlSegment('', null, null), []);
+      return new TreeNode<UrlSegment>(new UrlSegment('', {}, null), []);
     } else {
       return this.parseRoot();
     }
@@ -71,8 +83,7 @@ class _UrlParser {
 
   parseRoot(): TreeNode<UrlSegment> {
     let segments = this.parseSegments();
-    let queryParams = this.peekStartsWith('?') ? this.parseQueryParams() : null;
-    return new TreeNode<UrlSegment>(new UrlSegment('', queryParams, null), segments);
+    return new TreeNode<UrlSegment>(new UrlSegment('', {}, null), segments);
   }
 
   parseSegments(outletName: string = null): TreeNode<UrlSegment>[] {
@@ -92,7 +103,7 @@ class _UrlParser {
       path = parts[1];
     }
 
-    var matrixParams: {[key: string]: any} = null;
+    var matrixParams: {[key: string]: any} = {};
     if (this.peekStartsWith(';')) {
       matrixParams = this.parseMatrixParams();
     }
@@ -108,16 +119,9 @@ class _UrlParser {
       children = this.parseSegments();
     }
 
-    if (isPresent(matrixParams)) {
-      let matrixParamsSegment = new UrlSegment(null, matrixParams, null);
-      let matrixParamsNode = new TreeNode<UrlSegment>(matrixParamsSegment, children);
-      let segment = new UrlSegment(path, null, outletName);
-      return [new TreeNode<UrlSegment>(segment, [matrixParamsNode].concat(aux))];
-    } else {
-      let segment = new UrlSegment(path, null, outletName);
-      let node = new TreeNode<UrlSegment>(segment, children);
-      return [node].concat(aux);
-    }
+    let segment = new UrlSegment(path, matrixParams, outletName);
+    let node = new TreeNode<UrlSegment>(segment, children);
+    return [node].concat(aux);
   }
 
   parseQueryParams(): {[key: string]: any} {

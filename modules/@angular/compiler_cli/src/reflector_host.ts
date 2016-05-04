@@ -37,11 +37,15 @@ export class NodeReflectorHost implements StaticReflectorHost, ImportGenerator {
     return resolved ? resolved.resolvedFileName : null;
   };
 
+  private normalizeAssetUrl(url: string): string {
+    let assetUrl = AssetUrl.parse(url);
+    return assetUrl ? `${assetUrl.packageName}/${assetUrl.modulePath}` : null;
+  }
 
   private resolveAssetUrl(url: string, containingFile: string): string {
-    let assetUrl = AssetUrl.parse(url);
+    let assetUrl = this.normalizeAssetUrl(url);
     if (assetUrl) {
-      return this.resolve(`${assetUrl.packageName}/${assetUrl.modulePath}`, containingFile);
+      return this.resolve(assetUrl, containingFile);
     }
     return url;
   }
@@ -59,6 +63,9 @@ export class NodeReflectorHost implements StaticReflectorHost, ImportGenerator {
     // TODO(tbosch): if a file does not yet exist (because we compile it later),
     // we still need to create it so that the `resolve` method works!
     if (!this.compilerHost.fileExists(importedFile)) {
+      if (this.ngOptions.trace) {
+        console.log(`Generating empty file ${importedFile} to allow resolution of import`);
+      }
       this.compilerHost.writeFile(importedFile, '', false);
       fs.writeFileSync(importedFile, '');
     }
@@ -89,6 +96,10 @@ export class NodeReflectorHost implements StaticReflectorHost, ImportGenerator {
     }
 
     try {
+      let assetUrl = this.normalizeAssetUrl(module);
+      if (assetUrl) {
+        module = assetUrl;
+      }
       const filePath = this.resolve(module, containingFile);
 
       if (!filePath) {
